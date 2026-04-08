@@ -79,6 +79,144 @@ function buildArtistButtons(url) {
   );
 }
 
+function buildPanelEmbed() {
+  return baseEmbed(
+    'SC Stats Control Panel',
+    [
+      'Добро пожаловать в главное меню SoundCloud-бота.',
+      '',
+      '**Доступные разделы:**',
+      '• Track Stats — статистика по треку',
+      '• Artist Stats — статистика по артисту',
+      '• Watchlist — сохранённые треки и артисты',
+      '• Help — список команд'
+    ].join('\n')
+  ).addFields(
+    {
+      name: 'Quick Start',
+      value: [
+        '`/sc track url:<soundcloud track>`',
+        '`/sc artist url:<soundcloud artist>`',
+        '`/sc top url:<soundcloud artist>`'
+      ].join('\n'),
+      inline: false
+    }
+  );
+}
+
+function buildPanelButtons() {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('panel_track_help')
+        .setLabel('Track Stats')
+        .setStyle(ButtonStyle.Primary),
+
+      new ButtonBuilder()
+        .setCustomId('panel_artist_help')
+        .setLabel('Artist Stats')
+        .setStyle(ButtonStyle.Primary),
+
+      new ButtonBuilder()
+        .setCustomId('panel_watchlist')
+        .setLabel('Watchlist')
+        .setStyle(ButtonStyle.Secondary),
+
+      new ButtonBuilder()
+        .setCustomId('panel_help')
+        .setLabel('Help')
+        .setStyle(ButtonStyle.Secondary)
+    )
+  ];
+}
+
+function buildHelpEmbed() {
+  return baseEmbed(
+    'SC Stats Help',
+    'Ниже основные команды бота.'
+  ).addFields(
+    {
+      name: 'Track Commands',
+      value: [
+        '`/sc track url:<soundcloud track>`',
+        '`/sc watch add-track url:<track> label:<optional>`'
+      ].join('\n'),
+      inline: false
+    },
+    {
+      name: 'Artist Commands',
+      value: [
+        '`/sc artist url:<soundcloud artist>`',
+        '`/sc top url:<soundcloud artist>`',
+        '`/sc watch add-artist url:<artist> label:<optional>`'
+      ].join('\n'),
+      inline: false
+    },
+    {
+      name: 'Watchlist',
+      value: [
+        '`/sc watch list`',
+        '`/sc watch remove id:<id>`'
+      ].join('\n'),
+      inline: false
+    },
+    {
+      name: 'Panel',
+      value: '`/sc panel`',
+      inline: false
+    }
+  );
+}
+
+function buildTrackHelpEmbed() {
+  return baseEmbed(
+    'Track Stats',
+    'Как получить статистику по одному треку.'
+  ).addFields(
+    {
+      name: 'Command',
+      value: '`/sc track url:<soundcloud track url>`',
+      inline: false
+    },
+    {
+      name: 'Example',
+      value: '`/sc track url:https://soundcloud.com/artist/track-name`',
+      inline: false
+    },
+    {
+      name: 'What you get',
+      value: 'Plays, likes, comments, reposts, downloads, updated time.',
+      inline: false
+    }
+  );
+}
+
+function buildArtistHelpEmbed() {
+  return baseEmbed(
+    'Artist Stats',
+    'Как получить аналитику по артисту.'
+  ).addFields(
+    {
+      name: 'Commands',
+      value: [
+        '`/sc artist url:<soundcloud artist url>`',
+        '`/sc top url:<soundcloud artist url>`'
+      ].join('\n'),
+      inline: false
+    },
+    {
+      name: 'Example',
+      value: '`/sc artist url:https://soundcloud.com/artist-name`',
+      inline: false
+    },
+    {
+      name: 'What you get',
+      value: 'Total plays, likes, comments, reposts, downloads, top tracks.',
+      inline: false
+    }
+  );
+}
+
 function buildUrl(path, params = {}) {
   const url = new URL(path, BASE_URL);
 
@@ -321,6 +459,13 @@ async function handleWatch(interaction) {
   return false;
 }
 
+async function handlePanel(interaction) {
+  await interaction.editReply({
+    embeds: [buildPanelEmbed()],
+    components: buildPanelButtons()
+  });
+}
+
 client.once('ready', () => {
   console.log(`Бот запущен как ${client.user.tag}`);
 });
@@ -332,6 +477,51 @@ client.on('interactionCreate', async interaction => {
       const url = decodeURIComponent(rawUrl || '');
 
       await interaction.deferUpdate();
+
+      if (action === 'panel_track_help') {
+        await interaction.editReply({
+          embeds: [buildTrackHelpEmbed()],
+          components: buildPanelButtons()
+        });
+        return;
+      }
+
+      if (action === 'panel_artist_help') {
+        await interaction.editReply({
+          embeds: [buildArtistHelpEmbed()],
+          components: buildPanelButtons()
+        });
+        return;
+      }
+
+      if (action === 'panel_watchlist') {
+        if (!interaction.guildId) {
+          await interaction.followUp({
+            content: 'Эта кнопка работает только на сервере.',
+            ephemeral: true
+          });
+          return;
+        }
+
+        const items = listWatchItems({
+          userId: interaction.user.id,
+          guildId: interaction.guildId
+        });
+
+        await interaction.editReply({
+          embeds: [buildWatchListEmbed(items)],
+          components: buildPanelButtons()
+        });
+        return;
+      }
+
+      if (action === 'panel_help') {
+        await interaction.editReply({
+          embeds: [buildHelpEmbed()],
+          components: buildPanelButtons()
+        });
+        return;
+      }
 
       if (action === 'refresh_track') {
         const data = await fetchJson(buildUrl('/api/plays', { url }));
@@ -424,6 +614,12 @@ client.on('interactionCreate', async interaction => {
     if (handledWatch) return;
 
     const sub = interaction.options.getSubcommand();
+
+    if (sub === 'panel') {
+      await handlePanel(interaction);
+      return;
+    }
+
     const url = interaction.options.getString('url', true);
 
     if (sub === 'track') {

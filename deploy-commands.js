@@ -42,6 +42,12 @@ const commands = [
         )
     )
 
+    .addSubcommand(sub =>
+      sub
+        .setName('panel')
+        .setDescription('Открыть главное меню SC Stats')
+    )
+
     .addSubcommandGroup(group =>
       group
         .setName('watch')
