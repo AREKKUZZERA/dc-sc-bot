@@ -5,6 +5,7 @@ const commands = [
   new SlashCommandBuilder()
     .setName('sc')
     .setDescription('SoundCloud статистика')
+
     .addSubcommand(sub =>
       sub
         .setName('track')
@@ -16,6 +17,7 @@ const commands = [
             .setRequired(true)
         )
     )
+
     .addSubcommand(sub =>
       sub
         .setName('artist')
@@ -27,6 +29,7 @@ const commands = [
             .setRequired(true)
         )
     )
+
     .addSubcommand(sub =>
       sub
         .setName('top')
@@ -36,6 +39,62 @@ const commands = [
             .setName('url')
             .setDescription('Ссылка на профиль SoundCloud')
             .setRequired(true)
+        )
+    )
+
+    .addSubcommandGroup(group =>
+      group
+        .setName('watch')
+        .setDescription('Watchlist')
+        .addSubcommand(sub =>
+          sub
+            .setName('add-track')
+            .setDescription('Добавить трек в watchlist')
+            .addStringOption(opt =>
+              opt
+                .setName('url')
+                .setDescription('Ссылка на трек')
+                .setRequired(true)
+            )
+            .addStringOption(opt =>
+              opt
+                .setName('label')
+                .setDescription('Своя подпись')
+                .setRequired(false)
+            )
+        )
+        .addSubcommand(sub =>
+          sub
+            .setName('add-artist')
+            .setDescription('Добавить артиста в watchlist')
+            .addStringOption(opt =>
+              opt
+                .setName('url')
+                .setDescription('Ссылка на профиль')
+                .setRequired(true)
+            )
+            .addStringOption(opt =>
+              opt
+                .setName('label')
+                .setDescription('Своя подпись')
+                .setRequired(false)
+            )
+        )
+        .addSubcommand(sub =>
+          sub
+            .setName('list')
+            .setDescription('Показать watchlist')
+        )
+        .addSubcommand(sub =>
+          sub
+            .setName('remove')
+            .setDescription('Удалить из watchlist')
+            .addIntegerOption(opt =>
+              opt
+                .setName('id')
+                .setDescription('ID записи')
+                .setRequired(true)
+            )
         )
     )
     .toJSON()
