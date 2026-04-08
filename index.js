@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import {
   Client,
- GatewayIntentBits,
+  GatewayIntentBits,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
@@ -39,75 +39,6 @@ function baseEmbed(title, description = '') {
     .setTimestamp();
 }
 
-function buildTrackButtons(url) {
-  return new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`refresh_track|${encodeURIComponent(url)}`)
-      .setLabel('Refresh')
-      .setStyle(ButtonStyle.Primary),
-
-    new ButtonBuilder()
-      .setCustomId(`watch_track|${encodeURIComponent(url)}`)
-      .setLabel('Save')
-      .setStyle(ButtonStyle.Secondary),
-
-    new ButtonBuilder()
-      .setLabel('Open in SoundCloud')
-      .setStyle(ButtonStyle.Link)
-      .setURL(url)
-  );
-}
-
-function buildArtistButtons(url) {
-  return new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`refresh_artist|${encodeURIComponent(url)}`)
-      .setLabel('Refresh')
-      .setStyle(ButtonStyle.Primary),
-
-    new ButtonBuilder()
-      .setCustomId(`top_artist|${encodeURIComponent(url)}`)
-      .setLabel('Top Tracks')
-      .setStyle(ButtonStyle.Secondary),
-
-    new ButtonBuilder()
-      .setCustomId(`watch_artist|${encodeURIComponent(url)}`)
-      .setLabel('Save')
-      .setStyle(ButtonStyle.Secondary),
-
-    new ButtonBuilder()
-      .setLabel('Open in SoundCloud')
-      .setStyle(ButtonStyle.Link)
-      .setURL(url)
-  );
-}
-
-function buildPanelEmbed() {
-  return baseEmbed(
-    'SC Stats Control Panel',
-    [
-      'Добро пожаловать в главное меню SoundCloud-бота.',
-      '',
-      '**Доступные разделы:**',
-      '• Track Stats — статистика по треку',
-      '• Artist Stats — статистика по артисту',
-      '• Watchlist — сохранённые треки и артисты',
-      '• Help — список команд'
-    ].join('\n')
-  ).addFields(
-    {
-      name: 'Quick Start',
-      value: [
-        '`/sc track url:<soundcloud track>`',
-        '`/sc artist url:<soundcloud artist>`',
-        '`/sc top url:<soundcloud artist>`',
-        '`/sc panel`'
-      ].join('\n'),
-      inline: false
-    }
-  );
-}
-
 function buildPanelButtons() {
   return [
     new ActionRowBuilder().addComponents(
@@ -132,6 +63,126 @@ function buildPanelButtons() {
         .setStyle(ButtonStyle.Secondary)
     )
   ];
+}
+
+function buildBackToPanelButtons() {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('panel_home')
+        .setLabel('Back')
+        .setStyle(ButtonStyle.Secondary)
+    )
+  ];
+}
+
+function buildTrackButtons(url) {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`refresh_track|${encodeURIComponent(url)}`)
+        .setLabel('Refresh')
+        .setStyle(ButtonStyle.Primary),
+
+      new ButtonBuilder()
+        .setCustomId(`watch_track|${encodeURIComponent(url)}`)
+        .setLabel('Save')
+        .setStyle(ButtonStyle.Secondary),
+
+      new ButtonBuilder()
+        .setCustomId('panel_home')
+        .setLabel('Panel')
+        .setStyle(ButtonStyle.Secondary),
+
+      new ButtonBuilder()
+        .setLabel('Open in SoundCloud')
+        .setStyle(ButtonStyle.Link)
+        .setURL(url)
+    )
+  ];
+}
+
+function buildArtistButtons(url) {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`refresh_artist|${encodeURIComponent(url)}`)
+        .setLabel('Refresh')
+        .setStyle(ButtonStyle.Primary),
+
+      new ButtonBuilder()
+        .setCustomId(`top_artist|${encodeURIComponent(url)}`)
+        .setLabel('Top Tracks')
+        .setStyle(ButtonStyle.Secondary),
+
+      new ButtonBuilder()
+        .setCustomId(`watch_artist|${encodeURIComponent(url)}`)
+        .setLabel('Save')
+        .setStyle(ButtonStyle.Secondary),
+
+      new ButtonBuilder()
+        .setCustomId('panel_home')
+        .setLabel('Panel')
+        .setStyle(ButtonStyle.Secondary)
+    ),
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel('Open in SoundCloud')
+        .setStyle(ButtonStyle.Link)
+        .setURL(url)
+    )
+  ];
+}
+
+function buildTopButtons(url) {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`refresh_artist|${encodeURIComponent(url)}`)
+        .setLabel('Artist Overview')
+        .setStyle(ButtonStyle.Primary),
+
+      new ButtonBuilder()
+        .setCustomId(`watch_artist|${encodeURIComponent(url)}`)
+        .setLabel('Save')
+        .setStyle(ButtonStyle.Secondary),
+
+      new ButtonBuilder()
+        .setCustomId('panel_home')
+        .setLabel('Panel')
+        .setStyle(ButtonStyle.Secondary)
+    ),
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel('Open in SoundCloud')
+        .setStyle(ButtonStyle.Link)
+        .setURL(url)
+    )
+  ];
+}
+
+function buildPanelEmbed() {
+  return baseEmbed(
+    'SC Stats Control Panel',
+    [
+      'Добро пожаловать в главное меню SoundCloud-бота.',
+      '',
+      '**Доступные разделы:**',
+      '• Track Stats — статистика по треку',
+      '• Artist Stats — статистика по артисту',
+      '• Watchlist — сохранённые треки и артисты',
+      '• Help — список команд'
+    ].join('\n')
+  ).addFields({
+    name: 'Quick Start',
+    value: [
+      '`/sc track url:<soundcloud track>`',
+      '`/sc artist url:<soundcloud artist>`',
+      '`/sc top url:<soundcloud artist>`',
+      '`/sc panel`'
+    ].join('\n'),
+    inline: false
+  });
 }
 
 function buildHelpEmbed() {
@@ -235,7 +286,6 @@ function buildTrackModal() {
 
   const row = new ActionRowBuilder().addComponents(urlInput);
   modal.addComponents(row);
-
   return modal;
 }
 
@@ -253,7 +303,6 @@ function buildArtistModal() {
 
   const row = new ActionRowBuilder().addComponents(urlInput);
   modal.addComponents(row);
-
   return modal;
 }
 
@@ -271,9 +320,7 @@ function buildUrl(path, params = {}) {
 
 async function fetchJson(url) {
   const res = await fetch(url, {
-    headers: {
-      Accept: 'application/json'
-    }
+    headers: { Accept: 'application/json' }
   });
 
   const text = await res.text();
@@ -311,13 +358,8 @@ function buildTrackEmbed(data) {
     }
   );
 
-  if (data.artwork_url) {
-    embed.setThumbnail(data.artwork_url);
-  }
-
-  if (data.permalink_url) {
-    embed.setURL(data.permalink_url);
-  }
+  if (data.artwork_url) embed.setThumbnail(data.artwork_url);
+  if (data.permalink_url) embed.setURL(data.permalink_url);
 
   return embed;
 }
@@ -392,7 +434,7 @@ async function handleTrack(url, interaction) {
   const data = await fetchJson(buildUrl('/api/plays', { url }));
   await interaction.editReply({
     embeds: [buildTrackEmbed(data)],
-    components: [buildTrackButtons(url)]
+    components: buildTrackButtons(url)
   });
 }
 
@@ -400,7 +442,7 @@ async function handleArtist(url, interaction) {
   const data = await fetchJson(buildUrl('/api/dashboard', { url }));
   await interaction.editReply({
     embeds: [buildArtistEmbed(data)],
-    components: [buildArtistButtons(url)]
+    components: buildArtistButtons(url)
   });
 }
 
@@ -408,7 +450,7 @@ async function handleTop(url, interaction) {
   const data = await fetchJson(buildUrl('/api/dashboard', { url }));
   await interaction.editReply({
     embeds: [buildTopEmbed(data)],
-    components: [buildArtistButtons(url)]
+    components: buildTopButtons(url)
   });
 }
 
@@ -431,14 +473,7 @@ async function handleWatch(interaction) {
     const label = interaction.options.getString('label');
 
     try {
-      addWatchItem({
-        userId,
-        guildId,
-        type: 'track',
-        url,
-        label
-      });
-
+      addWatchItem({ userId, guildId, type: 'track', url, label });
       await interaction.editReply(`✅ Трек добавлен в watchlist.\n${url}`);
     } catch (error) {
       if (String(error.message).includes('UNIQUE')) {
@@ -456,14 +491,7 @@ async function handleWatch(interaction) {
     const label = interaction.options.getString('label');
 
     try {
-      addWatchItem({
-        userId,
-        guildId,
-        type: 'artist',
-        url,
-        label
-      });
-
+      addWatchItem({ userId, guildId, type: 'artist', url, label });
       await interaction.editReply(`✅ Артист добавлен в watchlist.\n${url}`);
     } catch (error) {
       if (String(error.message).includes('UNIQUE')) {
@@ -478,7 +506,10 @@ async function handleWatch(interaction) {
 
   if (sub === 'list') {
     const items = listWatchItems({ userId, guildId });
-    await interaction.editReply({ embeds: [buildWatchListEmbed(items)] });
+    await interaction.editReply({
+      embeds: [buildWatchListEmbed(items)],
+      components: buildBackToPanelButtons()
+    });
     return true;
   }
 
@@ -528,6 +559,14 @@ client.on('interactionCreate', async interaction => {
 
       await interaction.deferUpdate();
 
+      if (action === 'panel_home') {
+        await interaction.editReply({
+          embeds: [buildPanelEmbed()],
+          components: buildPanelButtons()
+        });
+        return;
+      }
+
       if (action === 'panel_watchlist') {
         if (!interaction.guildId) {
           await interaction.followUp({
@@ -544,7 +583,7 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.editReply({
           embeds: [buildWatchListEmbed(items)],
-          components: buildPanelButtons()
+          components: buildBackToPanelButtons()
         });
         return;
       }
@@ -552,23 +591,7 @@ client.on('interactionCreate', async interaction => {
       if (action === 'panel_help') {
         await interaction.editReply({
           embeds: [buildHelpEmbed()],
-          components: buildPanelButtons()
-        });
-        return;
-      }
-
-      if (action === 'panel_track_help') {
-        await interaction.editReply({
-          embeds: [buildTrackHelpEmbed()],
-          components: buildPanelButtons()
-        });
-        return;
-      }
-
-      if (action === 'panel_artist_help') {
-        await interaction.editReply({
-          embeds: [buildArtistHelpEmbed()],
-          components: buildPanelButtons()
+          components: buildBackToPanelButtons()
         });
         return;
       }
@@ -577,7 +600,7 @@ client.on('interactionCreate', async interaction => {
         const data = await fetchJson(buildUrl('/api/plays', { url }));
         await interaction.editReply({
           embeds: [buildTrackEmbed(data)],
-          components: [buildTrackButtons(url)]
+          components: buildTrackButtons(url)
         });
         return;
       }
@@ -586,7 +609,7 @@ client.on('interactionCreate', async interaction => {
         const data = await fetchJson(buildUrl('/api/dashboard', { url }));
         await interaction.editReply({
           embeds: [buildArtistEmbed(data)],
-          components: [buildArtistButtons(url)]
+          components: buildArtistButtons(url)
         });
         return;
       }
@@ -595,7 +618,7 @@ client.on('interactionCreate', async interaction => {
         const data = await fetchJson(buildUrl('/api/dashboard', { url }));
         await interaction.editReply({
           embeds: [buildTopEmbed(data)],
-          components: [buildArtistButtons(url)]
+          components: buildTopButtons(url)
         });
         return;
       }
@@ -665,7 +688,7 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.editReply({
           embeds: [buildTrackEmbed(data)],
-          components: [buildTrackButtons(url)]
+          components: buildTrackButtons(url)
         });
 
         return;
@@ -680,7 +703,7 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.editReply({
           embeds: [buildArtistEmbed(data)],
-          components: [buildArtistButtons(url)]
+          components: buildArtistButtons(url)
         });
 
         return;
