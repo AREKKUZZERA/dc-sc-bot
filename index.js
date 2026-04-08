@@ -1,11 +1,14 @@
 import 'dotenv/config';
 import {
   Client,
-  GatewayIntentBits,
+ GatewayIntentBits,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle
+  ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle
 } from 'discord.js';
 
 import {
@@ -97,7 +100,8 @@ function buildPanelEmbed() {
       value: [
         '`/sc track url:<soundcloud track>`',
         '`/sc artist url:<soundcloud artist>`',
-        '`/sc top url:<soundcloud artist>`'
+        '`/sc top url:<soundcloud artist>`',
+        '`/sc panel`'
       ].join('\n'),
       inline: false
     }
@@ -108,12 +112,12 @@ function buildPanelButtons() {
   return [
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId('panel_track_help')
+        .setCustomId('panel_open_track_modal')
         .setLabel('Track Stats')
         .setStyle(ButtonStyle.Primary),
 
       new ButtonBuilder()
-        .setCustomId('panel_artist_help')
+        .setCustomId('panel_open_artist_modal')
         .setLabel('Artist Stats')
         .setStyle(ButtonStyle.Primary),
 
@@ -215,6 +219,42 @@ function buildArtistHelpEmbed() {
       inline: false
     }
   );
+}
+
+function buildTrackModal() {
+  const modal = new ModalBuilder()
+    .setCustomId('modal_track_lookup')
+    .setTitle('Track Stats');
+
+  const urlInput = new TextInputBuilder()
+    .setCustomId('track_url')
+    .setLabel('SoundCloud track URL')
+    .setStyle(TextInputStyle.Short)
+    .setPlaceholder('https://soundcloud.com/artist/track-name')
+    .setRequired(true);
+
+  const row = new ActionRowBuilder().addComponents(urlInput);
+  modal.addComponents(row);
+
+  return modal;
+}
+
+function buildArtistModal() {
+  const modal = new ModalBuilder()
+    .setCustomId('modal_artist_lookup')
+    .setTitle('Artist Stats');
+
+  const urlInput = new TextInputBuilder()
+    .setCustomId('artist_url')
+    .setLabel('SoundCloud artist URL')
+    .setStyle(TextInputStyle.Short)
+    .setPlaceholder('https://soundcloud.com/artist-name')
+    .setRequired(true);
+
+  const row = new ActionRowBuilder().addComponents(urlInput);
+  modal.addComponents(row);
+
+  return modal;
 }
 
 function buildUrl(path, params = {}) {
@@ -476,23 +516,17 @@ client.on('interactionCreate', async interaction => {
       const [action, rawUrl] = interaction.customId.split('|');
       const url = decodeURIComponent(rawUrl || '');
 
+      if (action === 'panel_open_track_modal') {
+        await interaction.showModal(buildTrackModal());
+        return;
+      }
+
+      if (action === 'panel_open_artist_modal') {
+        await interaction.showModal(buildArtistModal());
+        return;
+      }
+
       await interaction.deferUpdate();
-
-      if (action === 'panel_track_help') {
-        await interaction.editReply({
-          embeds: [buildTrackHelpEmbed()],
-          components: buildPanelButtons()
-        });
-        return;
-      }
-
-      if (action === 'panel_artist_help') {
-        await interaction.editReply({
-          embeds: [buildArtistHelpEmbed()],
-          components: buildPanelButtons()
-        });
-        return;
-      }
 
       if (action === 'panel_watchlist') {
         if (!interaction.guildId) {
@@ -518,6 +552,22 @@ client.on('interactionCreate', async interaction => {
       if (action === 'panel_help') {
         await interaction.editReply({
           embeds: [buildHelpEmbed()],
+          components: buildPanelButtons()
+        });
+        return;
+      }
+
+      if (action === 'panel_track_help') {
+        await interaction.editReply({
+          embeds: [buildTrackHelpEmbed()],
+          components: buildPanelButtons()
+        });
+        return;
+      }
+
+      if (action === 'panel_artist_help') {
+        await interaction.editReply({
+          embeds: [buildArtistHelpEmbed()],
           components: buildPanelButtons()
         });
         return;
@@ -596,6 +646,56 @@ client.on('interactionCreate', async interaction => {
         await interaction.reply({
           content: `Ошибка: ${error.message}`,
           ephemeral: true
+        });
+      }
+      return;
+    }
+
+    return;
+  }
+
+  if (interaction.isModalSubmit()) {
+    try {
+      if (interaction.customId === 'modal_track_lookup') {
+        const url = interaction.fields.getTextInputValue('track_url');
+
+        await interaction.deferReply({ ephemeral: true });
+
+        const data = await fetchJson(buildUrl('/api/plays', { url }));
+
+        await interaction.editReply({
+          embeds: [buildTrackEmbed(data)],
+          components: [buildTrackButtons(url)]
+        });
+
+        return;
+      }
+
+      if (interaction.customId === 'modal_artist_lookup') {
+        const url = interaction.fields.getTextInputValue('artist_url');
+
+        await interaction.deferReply({ ephemeral: true });
+
+        const data = await fetchJson(buildUrl('/api/dashboard', { url }));
+
+        await interaction.editReply({
+          embeds: [buildArtistEmbed(data)],
+          components: [buildArtistButtons(url)]
+        });
+
+        return;
+      }
+    } catch (error) {
+      console.error(error);
+
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          content: `Ошибка: ${error.message}`,
+          ephemeral: true
+        });
+      } else {
+        await interaction.editReply({
+          content: `Ошибка: ${error.message}`
         });
       }
       return;
