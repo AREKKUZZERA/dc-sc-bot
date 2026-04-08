@@ -2,7 +2,10 @@ import 'dotenv/config';
 import {
   Client,
   GatewayIntentBits,
-  EmbedBuilder
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
 } from 'discord.js';
 
 import {
@@ -22,6 +25,58 @@ const BASE_URL = (
 
 function formatNumber(value) {
   return new Intl.NumberFormat('ru-RU').format(Number(value || 0));
+}
+
+function baseEmbed(title, description = '') {
+  return new EmbedBuilder()
+    .setTitle(title)
+    .setDescription(description)
+    .setColor(0xff5500)
+    .setFooter({ text: 'SC Stats • SoundCloud Analytics' })
+    .setTimestamp();
+}
+
+function buildTrackButtons(url) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`refresh_track|${encodeURIComponent(url)}`)
+      .setLabel('Refresh')
+      .setStyle(ButtonStyle.Primary),
+
+    new ButtonBuilder()
+      .setCustomId(`watch_track|${encodeURIComponent(url)}`)
+      .setLabel('Save')
+      .setStyle(ButtonStyle.Secondary),
+
+    new ButtonBuilder()
+      .setLabel('Open in SoundCloud')
+      .setStyle(ButtonStyle.Link)
+      .setURL(url)
+  );
+}
+
+function buildArtistButtons(url) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`refresh_artist|${encodeURIComponent(url)}`)
+      .setLabel('Refresh')
+      .setStyle(ButtonStyle.Primary),
+
+    new ButtonBuilder()
+      .setCustomId(`top_artist|${encodeURIComponent(url)}`)
+      .setLabel('Top Tracks')
+      .setStyle(ButtonStyle.Secondary),
+
+    new ButtonBuilder()
+      .setCustomId(`watch_artist|${encodeURIComponent(url)}`)
+      .setLabel('Save')
+      .setStyle(ButtonStyle.Secondary),
+
+    new ButtonBuilder()
+      .setLabel('Open in SoundCloud')
+      .setStyle(ButtonStyle.Link)
+      .setURL(url)
+  );
 }
 
 function buildUrl(path, params = {}) {
@@ -60,50 +115,53 @@ async function fetchJson(url) {
 }
 
 function buildTrackEmbed(data) {
-  const embed = new EmbedBuilder()
-    .setTitle(data.title || 'Трек')
-    .setURL(data.permalink_url || null)
-    .setDescription('Статистика по треку SoundCloud')
-    .addFields(
-      { name: '▶ Прослушивания', value: formatNumber(data.playback_count), inline: true },
-      { name: '❤ Лайки', value: formatNumber(data.likes), inline: true },
-      { name: '💬 Комменты', value: formatNumber(data.comment_count), inline: true },
-      { name: '🔁 Репосты', value: formatNumber(data.reposts_count), inline: true },
-      { name: '⬇ Загрузки', value: formatNumber(data.download_count), inline: true },
-      {
-        name: '🕒 Обновлено',
-        value: data.updatedAt
-          ? `<t:${Math.floor(new Date(data.updatedAt).getTime() / 1000)}:R>`
-          : '—',
-        inline: true
-      }
-    );
+  const embed = baseEmbed(
+    data.title || 'Track Overview',
+    'Live SoundCloud track analytics'
+  ).addFields(
+    { name: 'Plays', value: formatNumber(data.playback_count), inline: true },
+    { name: 'Likes', value: formatNumber(data.likes), inline: true },
+    { name: 'Comments', value: formatNumber(data.comment_count), inline: true },
+    { name: 'Reposts', value: formatNumber(data.reposts_count), inline: true },
+    { name: 'Downloads', value: formatNumber(data.download_count), inline: true },
+    {
+      name: 'Updated',
+      value: data.updatedAt
+        ? `<t:${Math.floor(new Date(data.updatedAt).getTime() / 1000)}:R>`
+        : '—',
+      inline: true
+    }
+  );
 
   if (data.artwork_url) {
     embed.setThumbnail(data.artwork_url);
+  }
+
+  if (data.permalink_url) {
+    embed.setURL(data.permalink_url);
   }
 
   return embed;
 }
 
 function buildArtistEmbed(data) {
-  const embed = new EmbedBuilder()
-    .setTitle(data.artist || 'Артист')
-    .setDescription(`Всего треков: **${formatNumber(data.trackCount)}**`)
-    .addFields(
-      { name: '▶ Всего прослушиваний', value: formatNumber(data.playback_count), inline: true },
-      { name: '❤ Всего лайков', value: formatNumber(data.likes), inline: true },
-      { name: '💬 Всего комментариев', value: formatNumber(data.comments), inline: true },
-      { name: '🔁 Всего репостов', value: formatNumber(data.reposts), inline: true },
-      { name: '⬇ Всего загрузок', value: formatNumber(data.downloads), inline: true },
-      {
-        name: '🕒 Обновлено',
-        value: data.updatedAt
-          ? `<t:${Math.floor(new Date(data.updatedAt).getTime() / 1000)}:R>`
-          : '—',
-        inline: true
-      }
-    );
+  const embed = baseEmbed(
+    data.artist || 'Artist Overview',
+    `Catalog overview • ${formatNumber(data.trackCount)} tracks`
+  ).addFields(
+    { name: 'Total Plays', value: formatNumber(data.playback_count), inline: true },
+    { name: 'Total Likes', value: formatNumber(data.likes), inline: true },
+    { name: 'Comments', value: formatNumber(data.comments), inline: true },
+    { name: 'Reposts', value: formatNumber(data.reposts), inline: true },
+    { name: 'Downloads', value: formatNumber(data.downloads), inline: true },
+    {
+      name: 'Updated',
+      value: data.updatedAt
+        ? `<t:${Math.floor(new Date(data.updatedAt).getTime() / 1000)}:R>`
+        : '—',
+      inline: true
+    }
+  );
 
   const top3 = Array.isArray(data.tracks)
     ? [...data.tracks]
@@ -113,9 +171,9 @@ function buildArtistEmbed(data) {
 
   if (top3.length) {
     embed.addFields({
-      name: '🔥 Топ 3 трека',
+      name: 'Top Performers',
       value: top3
-        .map((t, i) => `${i + 1}. **${t.title || 'Без названия'}** — ${formatNumber(t.playback_count)} plays`)
+        .map((t, i) => `${i + 1}. **${t.title || 'Untitled'}** — ${formatNumber(t.playback_count)}`)
         .join('\n')
     });
   }
@@ -130,43 +188,50 @@ function buildTopEmbed(data) {
         .slice(0, 10)
     : [];
 
-  return new EmbedBuilder()
-    .setTitle(`Топ треков — ${data.artist || 'Артист'}`)
-    .setDescription(
-      tracks.length
-        ? tracks
-            .map((t, i) => `${i + 1}. **${t.title || 'Без названия'}** — ${formatNumber(t.playback_count)} plays`)
-            .join('\n')
-        : 'Нет данных'
-    );
+  return baseEmbed(
+    `Top Tracks — ${data.artist || 'Artist'}`,
+    tracks.length
+      ? tracks
+          .map((t, i) => `**${i + 1}.** ${t.title || 'Untitled'} — ${formatNumber(t.playback_count)} plays`)
+          .join('\n')
+      : 'No data available'
+  );
 }
 
 function buildWatchListEmbed(items) {
-  return new EmbedBuilder()
-    .setTitle('📌 Watchlist')
-    .setDescription(
-      items.length
-        ? items.map(item => {
-            const label = item.label ? ` — **${item.label}**` : '';
-            return `\`${item.id}\` • **${item.type}**${label}\n${item.url}`;
-          }).join('\n\n')
-        : 'Список пуст'
-    );
+  return baseEmbed(
+    '📌 Watchlist',
+    items.length
+      ? items.map(item => {
+          const label = item.label ? ` — **${item.label}**` : '';
+          return `\`${item.id}\` • **${item.type}**${label}\n${item.url}`;
+        }).join('\n\n')
+      : 'Список пуст'
+  );
 }
 
 async function handleTrack(url, interaction) {
   const data = await fetchJson(buildUrl('/api/plays', { url }));
-  await interaction.editReply({ embeds: [buildTrackEmbed(data)] });
+  await interaction.editReply({
+    embeds: [buildTrackEmbed(data)],
+    components: [buildTrackButtons(url)]
+  });
 }
 
 async function handleArtist(url, interaction) {
   const data = await fetchJson(buildUrl('/api/dashboard', { url }));
-  await interaction.editReply({ embeds: [buildArtistEmbed(data)] });
+  await interaction.editReply({
+    embeds: [buildArtistEmbed(data)],
+    components: [buildArtistButtons(url)]
+  });
 }
 
 async function handleTop(url, interaction) {
   const data = await fetchJson(buildUrl('/api/dashboard', { url }));
-  await interaction.editReply({ embeds: [buildTopEmbed(data)] });
+  await interaction.editReply({
+    embeds: [buildTopEmbed(data)],
+    components: [buildArtistButtons(url)]
+  });
 }
 
 async function handleWatch(interaction) {
@@ -261,6 +326,94 @@ client.once('ready', () => {
 });
 
 client.on('interactionCreate', async interaction => {
+  if (interaction.isButton()) {
+    try {
+      const [action, rawUrl] = interaction.customId.split('|');
+      const url = decodeURIComponent(rawUrl || '');
+
+      await interaction.deferUpdate();
+
+      if (action === 'refresh_track') {
+        const data = await fetchJson(buildUrl('/api/plays', { url }));
+        await interaction.editReply({
+          embeds: [buildTrackEmbed(data)],
+          components: [buildTrackButtons(url)]
+        });
+        return;
+      }
+
+      if (action === 'refresh_artist') {
+        const data = await fetchJson(buildUrl('/api/dashboard', { url }));
+        await interaction.editReply({
+          embeds: [buildArtistEmbed(data)],
+          components: [buildArtistButtons(url)]
+        });
+        return;
+      }
+
+      if (action === 'top_artist') {
+        const data = await fetchJson(buildUrl('/api/dashboard', { url }));
+        await interaction.editReply({
+          embeds: [buildTopEmbed(data)],
+          components: [buildArtistButtons(url)]
+        });
+        return;
+      }
+
+      if (action === 'watch_track') {
+        if (!interaction.guildId) return;
+
+        try {
+          addWatchItem({
+            userId: interaction.user.id,
+            guildId: interaction.guildId,
+            type: 'track',
+            url,
+            label: null
+          });
+        } catch {}
+
+        await interaction.followUp({
+          content: 'Трек сохранён в watchlist.',
+          ephemeral: true
+        });
+        return;
+      }
+
+      if (action === 'watch_artist') {
+        if (!interaction.guildId) return;
+
+        try {
+          addWatchItem({
+            userId: interaction.user.id,
+            guildId: interaction.guildId,
+            type: 'artist',
+            url,
+            label: null
+          });
+        } catch {}
+
+        await interaction.followUp({
+          content: 'Артист сохранён в watchlist.',
+          ephemeral: true
+        });
+        return;
+      }
+    } catch (error) {
+      console.error(error);
+
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          content: `Ошибка: ${error.message}`,
+          ephemeral: true
+        });
+      }
+      return;
+    }
+
+    return;
+  }
+
   if (!interaction.isChatInputCommand()) return;
   if (interaction.commandName !== 'sc') return;
 
